@@ -123,6 +123,33 @@ where
     };
 }
 
+/// Unsets environment variables for the duration of the closure.
+///
+/// The previous values are restored when the closure completes or panics, before unwinding the
+/// panic.
+///
+/// This is a shorthand and identical to the following:
+/// ```rust
+/// temp_env::with_vars(
+///     vec![
+///         ("FIRST_VAR", None::<&str>),
+///         ("SECOND_VAR", None::<&str>),
+///     ],
+///     || {
+///         // Run some code where `FIRST_VAR` and `SECOND_VAR` are unset (even if
+///         // they were set before)
+///     }
+/// );
+/// ```
+pub fn with_vars_unset<K, F>(keys: Vec<K>, closure: F)
+where
+    K: AsRef<OsStr> + Clone + Eq + Hash,
+    F: Fn() + UnwindSafe + RefUnwindSafe,
+{
+    let kvs = keys.iter().map(|key| (key, None::<&str>)).collect::<Vec<_>>();
+    with_vars(kvs, closure);
+}
+
 fn update_env<K, V>(key: K, value: Option<V>)
 where
     K: AsRef<OsStr>,
@@ -139,6 +166,7 @@ where
 #[cfg(test)]
 mod tests {
     use std::{env, panic};
+    use std::env::VarError;
 
     /// Test whether setting a variable is correctly undone.
     #[test]
@@ -237,9 +265,45 @@ mod tests {
         assert!(two_not_set_after.is_err(), "`TWO` must not be set.");
     }
 
-    /// Test whether unsetting one of the variable is correctly undone.
+    /// Test whether unsetting multiple variables is correctly undone.
     #[test]
     fn test_with_vars_unset() {
+        env::set_var("SET_TO_BE_UNSET", "val");
+        env::remove_var("UNSET_TO_BE_UNSET");
+        // Check test preconditions
+        assert_eq!(
+            env::var("SET_TO_BE_UNSET"), Result::Ok("val".to_string()),
+        );
+        assert_eq!(
+            env::var("UNSET_TO_BE_UNSET"),
+            Result::Err(VarError::NotPresent),
+        );
+
+        crate::with_vars_unset(
+            vec!["SET_TO_BE_UNSET", "UNSET_TO_BE_UNSET"],
+            || {
+                assert_eq!(
+                    env::var("SET_TO_BE_UNSET"),
+                    Result::Err(VarError::NotPresent),
+                );
+                assert_eq!(
+                    env::var("UNSET_TO_BE_UNSET"),
+                    Result::Err(VarError::NotPresent),
+                );
+            },
+        );
+        assert_eq!(
+            env::var("SET_TO_BE_UNSET"), Result::Ok("val".to_string()),
+        );
+        assert_eq!(
+            env::var("UNSET_TO_BE_UNSET"),
+            Result::Err(VarError::NotPresent),
+        );
+    }
+
+    /// Test whether unsetting one of the variable is correctly undone.
+    #[test]
+    fn test_with_vars_partially_unset() {
         let to_be_set_not_set = env::var("TO_BE_SET");
         assert!(to_be_set_not_set.is_err(), "`TO_BE_SET` must not be set.");
         env::set_var("TO_BE_UNSET", "unset");
