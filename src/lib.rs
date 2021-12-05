@@ -60,6 +60,25 @@ where
     with_vars(vec![(key, value)], closure)
 }
 
+/// Unsets a single environment variable for the duration of the closure.
+///
+/// The previous values are restored when the closure completes or panics, before unwinding the
+/// panic.
+///
+/// This is a shorthand and identical to the following:
+/// ```rust
+/// temp_env::with_var("MY_ENV_VAR", None::<&str>, || {
+///     // Run some code where `MY_ENV_VAR` is unset.
+/// });
+/// ```
+pub fn with_var_unset<K, F>(key: K, closure: F)
+where
+    K: AsRef<OsStr> + Clone + Eq + Hash,
+    F: Fn() + UnwindSafe + RefUnwindSafe,
+{
+    with_var(key, None::<&str>, closure);
+}
+
 /// Sets environment variables for the duration of the closure.
 ///
 /// The previous values are restored when the closure completes or panics, before unwinding the
@@ -143,7 +162,7 @@ mod tests {
         let foo_is_set = env::var("FOO").unwrap();
         assert_eq!(foo_is_set, "bar", "`FOO` must be set to \"bar\".");
 
-        crate::with_var("FOO", None::<&str>, || {
+        crate::with_var_unset("FOO", || {
             let foo_not_set = env::var("FOO");
             assert!(foo_not_set.is_err(), "`FOO` must not be set.");
         });
