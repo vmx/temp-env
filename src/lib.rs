@@ -296,8 +296,7 @@ mod tests {
         crate::with_vars_unset(vec!["SET_TO_BE_UNSET", "UNSET_TO_BE_UNSET"], || {
             assert_eq!(env::var("SET_TO_BE_UNSET"), Err(VarError::NotPresent));
             assert_eq!(env::var("UNSET_TO_BE_UNSET"), Err(VarError::NotPresent));
-        },
-        );
+        });
         assert_eq!(env::var("SET_TO_BE_UNSET"), Ok("val".to_string()));
         assert_eq!(env::var("UNSET_TO_BE_UNSET"), Err(VarError::NotPresent));
     }
