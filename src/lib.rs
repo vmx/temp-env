@@ -185,18 +185,34 @@ mod tests {
 
     /// Test whether unsetting a variable is correctly undone.
     #[test]
-    fn test_with_var_unset() {
+    fn test_with_var_set_to_none() {
         env::set_var("FOO", "bar");
         let foo_is_set = env::var("FOO").unwrap();
         assert_eq!(foo_is_set, "bar", "`FOO` must be set to \"bar\".");
 
-        crate::with_var_unset("FOO", || {
+        crate::with_var("FOO", None::<&str>, || {
             let foo_not_set = env::var("FOO");
             assert!(foo_not_set.is_err(), "`FOO` must not be set.");
         });
 
         let foo_is_set_after = env::var("FOO").unwrap();
         assert_eq!(foo_is_set_after, "bar", "`FOO` must be set to \"bar\".");
+    }
+
+    /// Test whether unsetting a variable through the shorthand is correctly undone.
+    #[test]
+    fn test_with_var_unset() {
+        env::set_var("BAR", "foo");
+        let foo_is_set = env::var("BAR").unwrap();
+        assert_eq!(foo_is_set, "foo", "`BAR` must be set to \"foo\".");
+
+        crate::with_var_unset("BAR", || {
+            let foo_not_set = env::var("BAR");
+            assert!(foo_not_set.is_err(), "`BAR` must not be set.");
+        });
+
+        let foo_is_set_after = env::var("BAR").unwrap();
+        assert_eq!(foo_is_set_after, "foo", "`BAR` must be set to \"foo\".");
     }
 
     /// Test whether overriding an existing variable is correctly undone.
