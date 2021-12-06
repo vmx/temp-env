@@ -272,11 +272,11 @@ mod tests {
         env::remove_var("UNSET_TO_BE_UNSET");
         // Check test preconditions
         assert_eq!(
-            env::var("SET_TO_BE_UNSET"), Result::Ok("val".to_string()),
+            env::var("SET_TO_BE_UNSET"), Ok("val".to_string()),
         );
         assert_eq!(
             env::var("UNSET_TO_BE_UNSET"),
-            Result::Err(VarError::NotPresent),
+            Err(VarError::NotPresent),
         );
 
         crate::with_vars_unset(
@@ -284,20 +284,20 @@ mod tests {
             || {
                 assert_eq!(
                     env::var("SET_TO_BE_UNSET"),
-                    Result::Err(VarError::NotPresent),
+                    Err(VarError::NotPresent),
                 );
                 assert_eq!(
                     env::var("UNSET_TO_BE_UNSET"),
-                    Result::Err(VarError::NotPresent),
+                    Err(VarError::NotPresent),
                 );
             },
         );
         assert_eq!(
-            env::var("SET_TO_BE_UNSET"), Result::Ok("val".to_string()),
+            env::var("SET_TO_BE_UNSET"), Ok("val".to_string()),
         );
         assert_eq!(
             env::var("UNSET_TO_BE_UNSET"),
-            Result::Err(VarError::NotPresent),
+            Err(VarError::NotPresent),
         );
     }
 
