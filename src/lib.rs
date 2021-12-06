@@ -146,7 +146,10 @@ where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     F: Fn() + UnwindSafe + RefUnwindSafe,
 {
-    let kvs = keys.iter().map(|key| (key, None::<&str>)).collect::<Vec<_>>();
+    let kvs = keys
+        .iter()
+        .map(|key| (key, None::<&str>))
+        .collect::<Vec<_>>();
     with_vars(kvs, closure);
 }
 
@@ -165,8 +168,8 @@ where
 // run in parallel.
 #[cfg(test)]
 mod tests {
-    use std::{env, panic};
     use std::env::VarError;
+    use std::{env, panic};
 
     /// Test whether setting a variable is correctly undone.
     #[test]
@@ -287,34 +290,16 @@ mod tests {
         env::set_var("SET_TO_BE_UNSET", "val");
         env::remove_var("UNSET_TO_BE_UNSET");
         // Check test preconditions
-        assert_eq!(
-            env::var("SET_TO_BE_UNSET"), Ok("val".to_string()),
-        );
-        assert_eq!(
-            env::var("UNSET_TO_BE_UNSET"),
-            Err(VarError::NotPresent),
-        );
+        assert_eq!(env::var("SET_TO_BE_UNSET"), Ok("val".to_string()));
+        assert_eq!(env::var("UNSET_TO_BE_UNSET"), Err(VarError::NotPresent));
 
-        crate::with_vars_unset(
-            vec!["SET_TO_BE_UNSET", "UNSET_TO_BE_UNSET"],
-            || {
-                assert_eq!(
-                    env::var("SET_TO_BE_UNSET"),
-                    Err(VarError::NotPresent),
-                );
-                assert_eq!(
-                    env::var("UNSET_TO_BE_UNSET"),
-                    Err(VarError::NotPresent),
-                );
-            },
+        crate::with_vars_unset(vec!["SET_TO_BE_UNSET", "UNSET_TO_BE_UNSET"], || {
+            assert_eq!(env::var("SET_TO_BE_UNSET"), Err(VarError::NotPresent));
+            assert_eq!(env::var("UNSET_TO_BE_UNSET"), Err(VarError::NotPresent));
+        },
         );
-        assert_eq!(
-            env::var("SET_TO_BE_UNSET"), Ok("val".to_string()),
-        );
-        assert_eq!(
-            env::var("UNSET_TO_BE_UNSET"),
-            Err(VarError::NotPresent),
-        );
+        assert_eq!(env::var("SET_TO_BE_UNSET"), Ok("val".to_string()));
+        assert_eq!(env::var("UNSET_TO_BE_UNSET"), Err(VarError::NotPresent));
     }
 
     /// Test whether unsetting one of the variable is correctly undone.
