@@ -146,10 +146,7 @@ where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     F: Fn() + UnwindSafe + RefUnwindSafe,
 {
-    let kvs = keys
-        .iter()
-        .map(|key| (key, None::<&str>))
-        .collect();
+    let kvs = keys.iter().map(|key| (key, None::<&str>)).collect();
     with_vars(kvs, closure);
 }
 
