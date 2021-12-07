@@ -149,7 +149,7 @@ where
     let kvs = keys
         .iter()
         .map(|key| (key, None::<&str>))
-        .collect::<Vec<_>>();
+        .collect();
     with_vars(kvs, closure);
 }
 
