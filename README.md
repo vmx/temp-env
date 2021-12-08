@@ -40,6 +40,19 @@ temp_env::with_vars(
 );
 ```
 
+How does it work?
+-------
+
+This crate sets and unsets environment variables for the currently running (Rust) process. 
+It leverages [`std::env::set_var`].
+
+The provided functions `temp_env::with_*` provide the following features:
+- Avoid interference when running concurrently
+- Reset previously set env variables back to their original value upon completion, also in case of panic
+- Temporarily unsetting env variables
+
+Note that the crate makes use of a singleton mutex to avoid side effects between concurrently running tests.
+This may impact the degree of concurrency in your test execution.
 
 License
 -------
@@ -58,3 +71,4 @@ at your option.
 [@vmx]: https://github.com/vmx
 [LICENSE-APACHE]: LICENSE-APACHE
 [LICENSE-MIT]: LICENSE-MIT
+[`std::env::set_var`]: https://doc.rust-lang.org/std/env/fn.set_var.html
