@@ -47,7 +47,7 @@ static SERIAL_TEST: Lazy<Mutex<()>> = Lazy::new(Default::default);
 
 /// Sets a single environment variable for the duration of the closure.
 ///
-/// The previous values are restored when the closure completes or panics, before unwinding the
+/// The previous value is restored when the closure completes or panics, before unwinding the
 /// panic.
 ///
 /// If `value` is set to `None`, then the environment variable is unset.
@@ -62,7 +62,7 @@ where
 
 /// Unsets a single environment variable for the duration of the closure.
 ///
-/// The previous values are restored when the closure completes or panics, before unwinding the
+/// The previous value is restored when the closure completes or panics, before unwinding the
 /// panic.
 ///
 /// This is a shorthand and identical to the following:
