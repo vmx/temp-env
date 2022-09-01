@@ -115,7 +115,7 @@ where
         update_env(&key, value);
     }
 
-    match panic::catch_unwind(|| closure()) {
+    match panic::catch_unwind(closure) {
         Ok(result) => {
             for (key, value) in old_kvs {
                 update_env(key, value);
