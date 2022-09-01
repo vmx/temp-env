@@ -32,16 +32,16 @@
 //!     }
 //! );
 //! ```
-//! 
+//!
 //! It's possible the closure returns a value:
-//! 
+//!
 //! ```rust
 //! let s = temp_env::with_var("INNER_ENV_VAR", Some("inner value"), || {
 //!      std::env::var("INNER_ENV_VAR").unwrap()
 //! });
 //! println!("{}", s);  
 //! ```
-//! 
+//!
 
 use std::collections::HashMap;
 use std::env;
@@ -115,9 +115,7 @@ where
         update_env(&key, value);
     }
 
-    match panic::catch_unwind(|| {
-        closure()
-    }) {
+    match panic::catch_unwind(|| closure()) {
         Ok(result) => {
             for (key, value) in old_kvs {
                 update_env(key, value);
