@@ -10,7 +10,6 @@
 //!     // Run some code where `MY_ENV_VAR` set to `"production"`.
 //! });
 //!
-//!
 //! temp_env::with_vars(
 //!     vec![
 //!         ("FIRST_VAR", Some("Hello")),
@@ -32,6 +31,17 @@
 //!         // it was set before)
 //!     }
 //! );
+//! ```
+//! 
+//! It's possible the closure returns a value:
+//! 
+//! ```rust
+//! let s = temp_env::with_var("INNER_ENV_VAR", Some("inner value"), || {
+//!      std::env::var("INNER_ENV_VAR").unwrap()
+//! });
+//! println!("{}", s);  
+//! ```
+//! 
 
 use std::collections::HashMap;
 use std::env;
@@ -51,11 +61,11 @@ static SERIAL_TEST: Lazy<Mutex<()>> = Lazy::new(Default::default);
 /// panic.
 ///
 /// If `value` is set to `None`, then the environment variable is unset.
-pub fn with_var<K, V, F>(key: K, value: Option<V>, closure: F)
+pub fn with_var<K, V, F, R>(key: K, value: Option<V>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     V: AsRef<OsStr> + Clone,
-    F: Fn() + UnwindSafe + RefUnwindSafe,
+    F: Fn() -> R + UnwindSafe + RefUnwindSafe,
 {
     with_vars(vec![(key, value)], closure)
 }
@@ -71,12 +81,12 @@ where
 ///     // Run some code where `MY_ENV_VAR` is unset.
 /// });
 /// ```
-pub fn with_var_unset<K, F>(key: K, closure: F)
+pub fn with_var_unset<K, F, R>(key: K, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
-    F: Fn() + UnwindSafe + RefUnwindSafe,
+    F: Fn() -> R + UnwindSafe + RefUnwindSafe,
 {
-    with_var(key, None::<&str>, closure);
+    with_var(key, None::<&str>, closure)
 }
 
 /// Sets environment variables for the duration of the closure.
@@ -142,13 +152,13 @@ where
 ///     }
 /// );
 /// ```
-pub fn with_vars_unset<K, F>(keys: Vec<K>, closure: F)
+pub fn with_vars_unset<K, F, R>(keys: Vec<K>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
-    F: Fn() + UnwindSafe + RefUnwindSafe,
+    F: Fn() -> R + UnwindSafe + RefUnwindSafe,
 {
     let kvs = keys.iter().map(|key| (key, None::<&str>)).collect();
-    with_vars(kvs, closure);
+    with_vars(kvs, closure)
 }
 
 fn update_env<K, V>(key: K, value: Option<V>)
