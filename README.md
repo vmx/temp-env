@@ -8,8 +8,8 @@ This crate is useful for testing with different environment variables that shoul
 This code started as a small test helper written by [@fabian-braun] and [@nbaztec] and published by [@fabian-braun]
 on [StackOverflow]. [@vmx] found it useful and took the time to make it a proper crate.
 
-Example
--------
+Examples
+--------
 
 ```rust
 temp_env::with_var("MY_ENV_VAR", Some("production"), || {
@@ -38,6 +38,19 @@ temp_env::with_vars(
         // it was set before)
     }
 );
+```
+
+Starting from version 0.3.0 you can return a value from inside the closure:
+
+```rust
+let r = temp_env::with_var("MY_ENV_VAR", Some("production"), || {
+    let envvar = env::var("MY_ENV_VAR").unwrap();
+    if envvar == "production" {
+        true
+    } else {
+        false
+    }
+});
 ```
 
 How does it work?
