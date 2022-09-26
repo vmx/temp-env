@@ -10,4 +10,10 @@ categories = ["development-tools", "development-tools::testing"]
 edition = "2018"
 
 [dependencies]
+futures = { version = "0.3.21", optional = true }
 once_cell = "1.8.0"
+tokio = { version = "1.21.1", features = ["full"], optional = true }
+
+[features]
+default = []
+async_closure = ["dep:tokio", "dep:futures"]
