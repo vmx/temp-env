@@ -170,6 +170,54 @@ where
     }
 }
 
+#[cfg(feature = "async_closure")]
+/// Does the same as [`with_vars`] but it allows to pass an async closures.
+///
+/// ```rust
+/// async fn check_var() {
+///     let v = std::env::var("MY_VAR").unwrap();
+///     assert_eq!(v, "ok".to_owned());
+/// }
+
+/// #[tokio::test]
+/// async fn test_async_closure() {
+///     crate::async_with_vars(vec![("MY_VAR", Some("ok"))], check_var());
+/// }
+/// ```
+pub fn async_with_vars<K, V, F>(kvs: Vec<(K, Option<V>)>, closure: F)
+where
+    K: AsRef<OsStr> + Clone + Eq + Hash,
+    V: AsRef<OsStr> + Clone,
+    F: std::future::Future<Output = ()> + std::panic::UnwindSafe + std::future::IntoFuture,
+{
+    let guard = SERIAL_TEST.lock().unwrap();
+    let mut old_kvs: HashMap<K, Option<String>> = HashMap::new();
+    for (key, value) in kvs {
+        // If the same key is given several times, the original/old value is only correct before
+        // the environment was updated.
+        if !old_kvs.contains_key(&key) {
+            let old_value = env::var(&key).ok();
+            old_kvs.insert(key.clone(), old_value);
+        }
+        update_env(&key, value);
+    }
+
+    match panic::catch_unwind(|| futures::FutureExt::catch_unwind(closure)) {
+        Ok(_) => {
+            for (key, value) in old_kvs {
+                update_env(key, value);
+            }
+        }
+        Err(err) => {
+            for (key, value) in old_kvs {
+                update_env(key, value);
+            }
+            drop(guard);
+            panic::resume_unwind(err);
+        }
+    }
+}
+
 // Make sure that all tests use independent environment variables, so that they don't interfere if
 // run in parallel.
 #[cfg(test)]
@@ -478,5 +526,22 @@ mod tests {
             not_my_var_not_set_after.is_err(),
             "`NOT_MY_VAR` must not be set."
         );
+    }
+
+    #[cfg(feature = "async_closure")]
+    async fn check_var() {
+        let v = std::env::var("MY_VAR").unwrap();
+        assert_eq!(v, "ok".to_owned());
+    }
+
+    #[cfg(feature = "async_closure")]
+    #[tokio::test]
+    async fn test_async_closure() {
+        crate::async_with_vars(vec![("MY_VAR", Some("ok"))], check_var());
+        let f = async {
+            let v = std::env::var("MY_VAR").unwrap();
+            assert_eq!(v, "ok".to_owned());
+        };
+        crate::async_with_vars(vec![("MY_VAR", Some("ok"))], f);
     }
 }
