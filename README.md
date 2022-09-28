@@ -67,6 +67,11 @@ The provided functions `temp_env::with_*` provide the following features:
 Note that the crate makes use of a singleton mutex to avoid side effects between concurrently running tests.
 This may impact the degree of concurrency in your test execution.
 
+Features
+--------
+
+ - `async_closure`: When enabled you can use `async_with_var()` with async closures. This feature needs at least Rust version 1.64.
+
 License
 -------
 
