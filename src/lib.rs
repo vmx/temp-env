@@ -11,7 +11,7 @@
 //! });
 //!
 //! temp_env::with_vars(
-//!     vec![
+//!     [
 //!         ("FIRST_VAR", Some("Hello")),
 //!         ("SECOND_VAR", Some("World!")),
 //!     ],
@@ -22,7 +22,7 @@
 //! );
 //!
 //! temp_env::with_vars(
-//!     vec![
+//!     [
 //!         ("FIRST_VAR", Some("Hello")),
 //!         ("SECOND_VAR", None),
 //!     ],
@@ -67,7 +67,7 @@ where
     V: AsRef<OsStr> + Clone,
     F: Fn() -> R + UnwindSafe + RefUnwindSafe,
 {
-    with_vars(vec![(key, value)], closure)
+    with_vars([(key, value)], closure)
 }
 
 /// Unsets a single environment variable for the duration of the closure.
@@ -97,7 +97,7 @@ where
 /// If a `value` is set to `None`, then the environment variable is unset.
 ///
 /// If the variable with the same name is set multiple times, the last one wins.
-pub fn with_vars<K, V, F, R>(kvs: Vec<(K, Option<V>)>, closure: F) -> R
+pub fn with_vars<K, V, F, R>(kvs: impl AsRef<[(K, Option<V>)]>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     V: AsRef<OsStr> + Clone,
@@ -105,14 +105,14 @@ where
 {
     let guard = SERIAL_TEST.lock().unwrap();
     let mut old_kvs: HashMap<K, Option<String>> = HashMap::new();
-    for (key, value) in kvs {
+    for (key, value) in kvs.as_ref() {
         // If the same key is given several times, the original/old value is only correct before
         // the environment was updated.
-        if !old_kvs.contains_key(&key) {
-            let old_value = env::var(&key).ok();
+        if !old_kvs.contains_key(key) {
+            let old_value = env::var(key).ok();
             old_kvs.insert(key.clone(), old_value);
         }
-        update_env(&key, value);
+        update_env(key, value.as_ref());
     }
 
     match panic::catch_unwind(closure) {
@@ -140,7 +140,7 @@ where
 /// This is a shorthand and identical to the following:
 /// ```rust
 /// temp_env::with_vars(
-///     vec![
+///     [
 ///         ("FIRST_VAR", None::<&str>),
 ///         ("SECOND_VAR", None::<&str>),
 ///     ],
@@ -150,12 +150,16 @@ where
 ///     }
 /// );
 /// ```
-pub fn with_vars_unset<K, F, R>(keys: Vec<K>, closure: F) -> R
+pub fn with_vars_unset<K, F, R>(keys: impl AsRef<[K]>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     F: Fn() -> R + UnwindSafe + RefUnwindSafe,
 {
-    let kvs = keys.iter().map(|key| (key, None::<&str>)).collect();
+    let kvs = keys
+        .as_ref()
+        .iter()
+        .map(|key| (key, None::<&str>))
+        .collect::<Vec<_>>();
     with_vars(kvs, closure)
 }
 
@@ -181,10 +185,10 @@ where
 
 /// #[tokio::test]
 /// async fn test_async_closure() {
-///     crate::async_with_vars(vec![("MY_VAR", Some("ok"))], check_var());
+///     crate::async_with_vars([("MY_VAR", Some("ok"))], check_var());
 /// }
 /// ```
-pub fn async_with_vars<K, V, F>(kvs: Vec<(K, Option<V>)>, closure: F)
+pub fn async_with_vars<K, V, F>(kvs: impl AsRef<[(K, Option<V>)]>, closure: F)
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     V: AsRef<OsStr> + Clone,
@@ -192,14 +196,14 @@ where
 {
     let guard = SERIAL_TEST.lock().unwrap();
     let mut old_kvs: HashMap<K, Option<String>> = HashMap::new();
-    for (key, value) in kvs {
+    for (key, value) in kvs.as_ref() {
         // If the same key is given several times, the original/old value is only correct before
         // the environment was updated.
-        if !old_kvs.contains_key(&key) {
-            let old_value = env::var(&key).ok();
+        if !old_kvs.contains_key(key) {
+            let old_value = env::var(key).ok();
             old_kvs.insert(key.clone(), old_value);
         }
-        update_env(&key, value);
+        update_env(key, value.as_ref());
     }
 
     match panic::catch_unwind(|| futures::FutureExt::catch_unwind(closure)) {
@@ -325,7 +329,7 @@ mod tests {
         let two_not_set = env::var("TWO");
         assert!(two_not_set.is_err(), "`TWO` must not be set.");
 
-        crate::with_vars(vec![("ONE", Some("1")), ("TWO", Some("2"))], || {
+        crate::with_vars([("ONE", Some("1")), ("TWO", Some("2"))], || {
             let one_is_set = env::var("ONE").unwrap();
             assert_eq!(one_is_set, "1", "`ONE` must be set to \"1\".");
             let two_is_set = env::var("TWO").unwrap();
@@ -346,7 +350,7 @@ mod tests {
         let two_not_set = env::var("TWO");
         assert!(two_not_set.is_err(), "`TWO` must not be set.");
 
-        let r = crate::with_vars(vec![("ONE", Some("1")), ("TWO", Some("2"))], || {
+        let r = crate::with_vars([("ONE", Some("1")), ("TWO", Some("2"))], || {
             let one_is_set = env::var("ONE").unwrap();
             let two_is_set = env::var("TWO").unwrap();
             (one_is_set, two_is_set)
@@ -372,7 +376,7 @@ mod tests {
         assert_eq!(env::var("SET_TO_BE_UNSET"), Ok("val".to_string()));
         assert_eq!(env::var("UNSET_TO_BE_UNSET"), Err(VarError::NotPresent));
 
-        crate::with_vars_unset(vec!["SET_TO_BE_UNSET", "UNSET_TO_BE_UNSET"], || {
+        crate::with_vars_unset(["SET_TO_BE_UNSET", "UNSET_TO_BE_UNSET"], || {
             assert_eq!(env::var("SET_TO_BE_UNSET"), Err(VarError::NotPresent));
             assert_eq!(env::var("UNSET_TO_BE_UNSET"), Err(VarError::NotPresent));
         });
@@ -393,7 +397,7 @@ mod tests {
         );
 
         crate::with_vars(
-            vec![("TO_BE_SET", Some("set")), ("TO_BE_UNSET", None::<&str>)],
+            [("TO_BE_SET", Some("set")), ("TO_BE_UNSET", None::<&str>)],
             || {
                 let to_be_set_is_set = env::var("TO_BE_SET").unwrap();
                 assert_eq!(
@@ -430,15 +434,12 @@ mod tests {
         let now_is_set = env::var("NOW").unwrap();
         assert_eq!(now_is_set, "now", "`NOW` must be set to \"now\".");
 
-        crate::with_vars(
-            vec![("DOIT", Some("other")), ("NOW", Some("value"))],
-            || {
-                let doit_is_set_new = env::var("DOIT").unwrap();
-                assert_eq!(doit_is_set_new, "other", "`DOIT` must be set to \"other\".");
-                let now_is_set_new = env::var("NOW").unwrap();
-                assert_eq!(now_is_set_new, "value", "`NOW` must be set to \"value\".");
-            },
-        );
+        crate::with_vars([("DOIT", Some("other")), ("NOW", Some("value"))], || {
+            let doit_is_set_new = env::var("DOIT").unwrap();
+            assert_eq!(doit_is_set_new, "other", "`DOIT` must be set to \"other\".");
+            let now_is_set_new = env::var("NOW").unwrap();
+            assert_eq!(now_is_set_new, "value", "`NOW` must be set to \"value\".");
+        });
 
         let doit_is_set_after = env::var("DOIT").unwrap();
         assert_eq!(doit_is_set_after, "doit", "`DOIT` must be set to \"doit\".");
@@ -453,7 +454,7 @@ mod tests {
         assert!(override_not_set.is_err(), "`OVERRIDE` must not be set.");
 
         crate::with_vars(
-            vec![
+            [
                 ("OVERRIDE", Some("initial")),
                 ("OVERRIDE", Some("override")),
             ],
@@ -484,7 +485,7 @@ mod tests {
         );
 
         crate::with_vars(
-            vec![("MY_VAR", None::<&str>), ("MY_VAR", Some("new value"))],
+            [("MY_VAR", None::<&str>), ("MY_VAR", Some("new value"))],
             || {
                 let my_var_is_set_new = env::var("MY_VAR").unwrap();
                 assert_eq!(
@@ -508,7 +509,7 @@ mod tests {
         assert!(not_my_var_not_set.is_err(), "`NOT_MY_VAR` must not be set.");
 
         crate::with_vars(
-            vec![
+            [
                 ("NOT_MY_VAR", Some("it is set")),
                 ("NOT_MY_VAR", None::<&str>),
             ],
@@ -537,11 +538,11 @@ mod tests {
     #[cfg(feature = "async_closure")]
     #[tokio::test]
     async fn test_async_closure() {
-        crate::async_with_vars(vec![("MY_VAR", Some("ok"))], check_var());
+        crate::async_with_vars([("MY_VAR", Some("ok"))], check_var());
         let f = async {
             let v = std::env::var("MY_VAR").unwrap();
             assert_eq!(v, "ok".to_owned());
         };
-        crate::async_with_vars(vec![("MY_VAR", Some("ok"))], f);
+        crate::async_with_vars([("MY_VAR", Some("ok"))], f);
     }
 }
