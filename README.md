@@ -18,7 +18,7 @@ temp_env::with_var("MY_ENV_VAR", Some("production"), || {
 
 
 temp_env::with_vars(
-    vec![
+    [
         ("FIRST_VAR", Some("Hello")),
         ("SECOND_VAR", Some("World!")),
     ],
@@ -29,7 +29,7 @@ temp_env::with_vars(
 );
 
 temp_env::with_vars(
-    vec![
+    [
         ("FIRST_VAR", Some("Hello")),
         ("SECOND_VAR", None),
     ],
