@@ -197,7 +197,7 @@ where
 ///     crate::async_with_vars([("MY_VAR", Some("ok"))], check_var());
 /// }
 /// ```
-pub fn async_with_vars<K, V, F>(kvs: impl AsRef<[(K, Option<V>)]>, closure: F)
+pub async fn async_with_vars<K, V, F>(kvs: impl AsRef<[(K, Option<V>)]>, closure: F)
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     V: AsRef<OsStr> + Clone,
@@ -210,7 +210,7 @@ where
     for (key, value) in kvs.as_ref() {
         update_env(key, value.as_ref());
     }
-    closure;
+    closure.await;
     drop(old_env)
 }
 
@@ -543,12 +543,12 @@ mod tests {
     #[cfg(feature = "async_closure")]
     #[tokio::test]
     async fn test_async_closure() {
-        crate::async_with_vars([("MY_VAR", Some("ok"))], check_var());
+        crate::async_with_vars([("MY_VAR", Some("ok"))], check_var()).await;
         let f = async {
             let v = std::env::var("MY_VAR").unwrap();
             assert_eq!(v, "ok".to_owned());
         };
-        crate::async_with_vars([("MY_VAR", Some("ok"))], f);
+        crate::async_with_vars([("MY_VAR", Some("ok"))], f).await;
     }
 
     #[cfg(feature = "async_closure")]
@@ -558,7 +558,7 @@ mod tests {
         let f = async {
             tx.send(std::env::var("MY_VAR")).unwrap();
         };
-        crate::async_with_vars([("MY_VAR", Some("ok"))], f);
+        crate::async_with_vars([("MY_VAR", Some("ok"))], f).await;
         let value = rx.await.unwrap().unwrap();
         assert_eq!(value, "ok".to_owned());
     }
