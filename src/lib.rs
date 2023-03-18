@@ -49,11 +49,10 @@ use std::ffi::OsStr;
 use std::hash::Hash;
 use std::panic::{self, RefUnwindSafe, UnwindSafe};
 
-use once_cell::sync::Lazy;
 use parking_lot::ReentrantMutex;
 
 /// Make sure that the environment isn't modified concurrently.
-static SERIAL_TEST: Lazy<ReentrantMutex<()>> = Lazy::new(Default::default);
+static SERIAL_TEST: ReentrantMutex<()> = ReentrantMutex::new(());
 
 /// Sets a single environment variable for the duration of the closure.
 ///
