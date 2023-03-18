@@ -45,11 +45,11 @@
 
 use std::collections::HashMap;
 use std::env;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::hash::Hash;
-use std::panic::{self, RefUnwindSafe, UnwindSafe};
+use std::panic::{RefUnwindSafe, UnwindSafe};
 
-use parking_lot::ReentrantMutex;
+use parking_lot::{ReentrantMutex, ReentrantMutexGuard};
 
 /// Make sure that the environment isn't modified concurrently.
 static SERIAL_TEST: ReentrantMutex<()> = ReentrantMutex::new(());
@@ -88,6 +88,34 @@ where
     with_var(key, None::<&str>, closure)
 }
 
+struct RestoreEnv<'a> {
+    env: HashMap<&'a OsStr, Option<OsString>>,
+    _guard: ReentrantMutexGuard<'a, ()>,
+}
+
+impl<'a> RestoreEnv<'a> {
+    /// Capture the given variables from the environment.
+    ///
+    /// `guard` holds a lock on the shared mutex for exclusive access to the environment, to make
+    /// sure that the environment gets restored while the lock is still held, i.e the current
+    /// thread still has exclusive access to the environment.
+    fn capture<I>(guard: ReentrantMutexGuard<'a, ()>, vars: I) -> Self
+    where
+        I: Iterator<Item = &'a OsStr> + 'a,
+    {
+        let env = vars.map(|v| (v, env::var_os(v))).collect();
+        Self { env, _guard: guard }
+    }
+}
+
+impl<'a> Drop for RestoreEnv<'a> {
+    fn drop(&mut self) {
+        for (var, value) in self.env.iter() {
+            update_env(var, value.as_ref().map(|v| v.as_os_str()));
+        }
+    }
+}
+
 /// Sets environment variables for the duration of the closure.
 ///
 /// The previous values are restored when the closure completes or panics, before unwinding the
@@ -102,33 +130,16 @@ where
     V: AsRef<OsStr> + Clone,
     F: Fn() -> R + UnwindSafe + RefUnwindSafe,
 {
-    let guard = SERIAL_TEST.lock();
-    let mut old_kvs: HashMap<K, Option<String>> = HashMap::new();
+    let old_env = RestoreEnv::capture(
+        SERIAL_TEST.lock(),
+        kvs.as_ref().iter().map(|(k, _)| k.as_ref()),
+    );
     for (key, value) in kvs.as_ref() {
-        // If the same key is given several times, the original/old value is only correct before
-        // the environment was updated.
-        if !old_kvs.contains_key(key) {
-            let old_value = env::var(key).ok();
-            old_kvs.insert(key.clone(), old_value);
-        }
         update_env(key, value.as_ref());
     }
-
-    match panic::catch_unwind(closure) {
-        Ok(result) => {
-            for (key, value) in old_kvs {
-                update_env(key, value);
-            }
-            result
-        }
-        Err(err) => {
-            for (key, value) in old_kvs {
-                update_env(key, value);
-            }
-            drop(guard);
-            panic::resume_unwind(err);
-        }
-    }
+    let retval = closure();
+    drop(old_env);
+    retval
 }
 
 /// Unsets environment variables for the duration of the closure.
@@ -193,32 +204,15 @@ where
     V: AsRef<OsStr> + Clone,
     F: std::future::Future<Output = ()> + std::panic::UnwindSafe + std::future::IntoFuture,
 {
-    let guard = SERIAL_TEST.lock();
-    let mut old_kvs: HashMap<K, Option<String>> = HashMap::new();
+    let old_env = RestoreEnv::capture(
+        SERIAL_TEST.lock(),
+        kvs.as_ref().iter().map(|(k, _)| k.as_ref()),
+    );
     for (key, value) in kvs.as_ref() {
-        // If the same key is given several times, the original/old value is only correct before
-        // the environment was updated.
-        if !old_kvs.contains_key(key) {
-            let old_value = env::var(key).ok();
-            old_kvs.insert(key.clone(), old_value);
-        }
         update_env(key, value.as_ref());
     }
-
-    match panic::catch_unwind(|| futures::FutureExt::catch_unwind(closure)) {
-        Ok(_) => {
-            for (key, value) in old_kvs {
-                update_env(key, value);
-            }
-        }
-        Err(err) => {
-            for (key, value) in old_kvs {
-                update_env(key, value);
-            }
-            drop(guard);
-            panic::resume_unwind(err);
-        }
-    }
+    closure;
+    drop(old_env)
 }
 
 // Make sure that all tests use independent environment variables, so that they don't interfere if
