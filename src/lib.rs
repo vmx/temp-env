@@ -48,12 +48,12 @@ use std::env;
 use std::ffi::OsStr;
 use std::hash::Hash;
 use std::panic::{self, RefUnwindSafe, UnwindSafe};
-use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
+use parking_lot::ReentrantMutex;
 
 /// Make sure that the environment isn't modified concurrently.
-static SERIAL_TEST: Lazy<Mutex<()>> = Lazy::new(Default::default);
+static SERIAL_TEST: Lazy<ReentrantMutex<()>> = Lazy::new(Default::default);
 
 /// Sets a single environment variable for the duration of the closure.
 ///
@@ -103,7 +103,7 @@ where
     V: AsRef<OsStr> + Clone,
     F: Fn() -> R + UnwindSafe + RefUnwindSafe,
 {
-    let guard = SERIAL_TEST.lock().unwrap();
+    let guard = SERIAL_TEST.lock();
     let mut old_kvs: HashMap<K, Option<String>> = HashMap::new();
     for (key, value) in kvs.as_ref() {
         // If the same key is given several times, the original/old value is only correct before
@@ -194,7 +194,7 @@ where
     V: AsRef<OsStr> + Clone,
     F: std::future::Future<Output = ()> + std::panic::UnwindSafe + std::future::IntoFuture,
 {
-    let guard = SERIAL_TEST.lock().unwrap();
+    let guard = SERIAL_TEST.lock();
     let mut old_kvs: HashMap<K, Option<String>> = HashMap::new();
     for (key, value) in kvs.as_ref() {
         // If the same key is given several times, the original/old value is only correct before
@@ -527,6 +527,19 @@ mod tests {
             not_my_var_not_set_after.is_err(),
             "`NOT_MY_VAR` must not be set."
         );
+    }
+
+    #[test]
+    fn test_with_nested_set() {
+        crate::with_var("MY_VAR_1", Some("1"), || {
+            crate::with_var("MY_VAR_2", Some("2"), || {
+                assert_eq!(env::var("MY_VAR_1").unwrap(), "1");
+                assert_eq!(env::var("MY_VAR_2").unwrap(), "2");
+            })
+        });
+
+        assert!(env::var("MY_VAR_1").is_err());
+        assert!(env::var("MY_VAR_2").is_err());
     }
 
     #[cfg(feature = "async_closure")]
