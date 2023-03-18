@@ -550,4 +550,16 @@ mod tests {
         };
         crate::async_with_vars([("MY_VAR", Some("ok"))], f);
     }
+
+    #[cfg(feature = "async_closure")]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_async_closure_calls_closure() {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let f = async {
+            tx.send(std::env::var("MY_VAR")).unwrap();
+        };
+        crate::async_with_vars([("MY_VAR", Some("ok"))], f);
+        let value = rx.await.unwrap().unwrap();
+        assert_eq!(value, "ok".to_owned());
+    }
 }
