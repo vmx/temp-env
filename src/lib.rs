@@ -47,7 +47,6 @@ use std::collections::HashMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::hash::Hash;
-use std::panic::{RefUnwindSafe, UnwindSafe};
 
 use parking_lot::{ReentrantMutex, ReentrantMutexGuard};
 
@@ -64,7 +63,7 @@ pub fn with_var<K, V, F, R>(key: K, value: Option<V>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     V: AsRef<OsStr> + Clone,
-    F: Fn() -> R + UnwindSafe + RefUnwindSafe,
+    F: Fn() -> R,
 {
     with_vars([(key, value)], closure)
 }
@@ -83,7 +82,7 @@ where
 pub fn with_var_unset<K, F, R>(key: K, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
-    F: Fn() -> R + UnwindSafe + RefUnwindSafe,
+    F: Fn() -> R,
 {
     with_var(key, None::<&str>, closure)
 }
@@ -128,7 +127,7 @@ pub fn with_vars<K, V, F, R>(kvs: impl AsRef<[(K, Option<V>)]>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     V: AsRef<OsStr> + Clone,
-    F: Fn() -> R + UnwindSafe + RefUnwindSafe,
+    F: Fn() -> R,
 {
     let old_env = RestoreEnv::capture(
         SERIAL_TEST.lock(),
@@ -163,7 +162,7 @@ where
 pub fn with_vars_unset<K, F, R>(keys: impl AsRef<[K]>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
-    F: Fn() -> R + UnwindSafe + RefUnwindSafe,
+    F: Fn() -> R,
 {
     let kvs = keys
         .as_ref()
@@ -202,7 +201,7 @@ pub fn async_with_vars<K, V, F>(kvs: impl AsRef<[(K, Option<V>)]>, closure: F)
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     V: AsRef<OsStr> + Clone,
-    F: std::future::Future<Output = ()> + std::panic::UnwindSafe + std::future::IntoFuture,
+    F: std::future::Future<Output = ()> + std::future::IntoFuture,
 {
     let old_env = RestoreEnv::capture(
         SERIAL_TEST.lock(),
