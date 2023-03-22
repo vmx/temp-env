@@ -1,6 +1,6 @@
 [package]
 name = "temp-env"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Volker Mische <volker.mische@gmail.com>", "Fabian Braun <fabian-braun-os@mailbox.org>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/vmx/temp-env"
