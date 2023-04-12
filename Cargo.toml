@@ -8,6 +8,7 @@ description = "Set environment variables temporarily."
 keywords = ["env", "environment", "envvar", "temporary", "testing"]
 categories = ["development-tools", "development-tools::testing"]
 edition = "2018"
+rust-version = "1.62.1"
 
 [dependencies]
 futures = { version = "0.3.21", optional = true }
