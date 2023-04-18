@@ -43,6 +43,7 @@
 //! ```
 //!
 
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -51,7 +52,7 @@ use std::hash::Hash;
 use parking_lot::{ReentrantMutex, ReentrantMutexGuard};
 
 /// Make sure that the environment isn't modified concurrently.
-static SERIAL_TEST: ReentrantMutex<()> = ReentrantMutex::new(());
+static SERIAL_TEST: Lazy<ReentrantMutex<()>> = Lazy::new(|| ReentrantMutex::new(()));
 
 /// Sets a single environment variable for the duration of the closure.
 ///
