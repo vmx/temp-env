@@ -566,7 +566,7 @@ mod tests {
 
     #[cfg(feature = "async_closure")]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_async_closure_returns_value() {
+    async fn test_async_with_vars_set_returning() {
         let one_not_set = env::var("ONE");
         assert!(one_not_set.is_err(), "`ONE` must not be set.");
         let two_not_set = env::var("TWO");
