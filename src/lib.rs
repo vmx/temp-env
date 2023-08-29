@@ -197,11 +197,11 @@ where
 ///     crate::async_with_vars([("MY_VAR", Some("ok"))], check_var());
 /// }
 /// ```
-pub async fn async_with_vars<K, V, F>(kvs: impl AsRef<[(K, Option<V>)]>, closure: F)
+pub async fn async_with_vars<K, V, F, R>(kvs: impl AsRef<[(K, Option<V>)]>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     V: AsRef<OsStr> + Clone,
-    F: std::future::Future<Output = ()> + std::future::IntoFuture,
+    F: std::future::Future<Output = R> + std::future::IntoFuture<Output = R>,
 {
     let old_env = RestoreEnv::capture(
         SERIAL_TEST.lock(),
@@ -210,8 +210,9 @@ where
     for (key, value) in kvs.as_ref() {
         update_env(key, value.as_ref());
     }
-    closure.await;
-    drop(old_env)
+    let retval = closure.await;
+    drop(old_env);
+    retval
 }
 
 // Make sure that all tests use independent environment variables, so that they don't interfere if
