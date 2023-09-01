@@ -197,11 +197,11 @@ where
 ///     crate::async_with_vars([("MY_VAR", Some("ok"))], check_var());
 /// }
 /// ```
-pub async fn async_with_vars<K, V, F>(kvs: impl AsRef<[(K, Option<V>)]>, closure: F)
+pub async fn async_with_vars<K, V, F, R>(kvs: impl AsRef<[(K, Option<V>)]>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     V: AsRef<OsStr> + Clone,
-    F: std::future::Future<Output = ()> + std::future::IntoFuture,
+    F: std::future::Future<Output = R> + std::future::IntoFuture<Output = R>,
 {
     let old_env = RestoreEnv::capture(
         SERIAL_TEST.lock(),
@@ -210,8 +210,9 @@ where
     for (key, value) in kvs.as_ref() {
         update_env(key, value.as_ref());
     }
-    closure.await;
-    drop(old_env)
+    let retval = closure.await;
+    drop(old_env);
+    retval
 }
 
 // Make sure that all tests use independent environment variables, so that they don't interfere if
@@ -561,5 +562,31 @@ mod tests {
         crate::async_with_vars([("MY_VAR", Some("ok"))], f).await;
         let value = rx.await.unwrap().unwrap();
         assert_eq!(value, "ok".to_owned());
+    }
+
+    #[cfg(feature = "async_closure")]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_async_with_vars_set_returning() {
+        let one_not_set = env::var("ONE");
+        assert!(one_not_set.is_err(), "`ONE` must not be set.");
+        let two_not_set = env::var("TWO");
+        assert!(two_not_set.is_err(), "`TWO` must not be set.");
+
+        let r = crate::async_with_vars([("ONE", Some("1")), ("TWO", Some("2"))], async {
+            let one_is_set = env::var("ONE").unwrap();
+            let two_is_set = env::var("TWO").unwrap();
+            (one_is_set, two_is_set)
+        })
+        .await;
+
+        let (one_from_closure, two_from_closure) = r;
+
+        assert_eq!(one_from_closure, "1", "`ONE` had to be set to \"1\".");
+        assert_eq!(two_from_closure, "2", "`TWO` had to be set to \"2\".");
+
+        let one_not_set_after = env::var("ONE");
+        assert!(one_not_set_after.is_err(), "`ONE` must not be set.");
+        let two_not_set_after = env::var("TWO");
+        assert!(two_not_set_after.is_err(), "`TWO` must not be set.");
     }
 }
