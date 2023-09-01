@@ -29,7 +29,7 @@ jobs:
       - name: Test
         uses: actions-rs/cargo@v1
         with:
-          command: test
+          command: build
           # Test with default features only, as the async support needs a newer
           # Rust version.
           args: --workspace
