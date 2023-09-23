@@ -39,7 +39,7 @@
 //! let s = temp_env::with_var("INNER_ENV_VAR", Some("inner value"), || {
 //!      std::env::var("INNER_ENV_VAR").unwrap()
 //! });
-//! println!("{}", s);  
+//! println!("{}", s);
 //! ```
 //!
 
@@ -63,7 +63,7 @@ pub fn with_var<K, V, F, R>(key: K, value: Option<V>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     V: AsRef<OsStr> + Clone,
-    F: Fn() -> R,
+    F: FnOnce() -> R,
 {
     with_vars([(key, value)], closure)
 }
@@ -82,7 +82,7 @@ where
 pub fn with_var_unset<K, F, R>(key: K, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
-    F: Fn() -> R,
+    F: FnOnce() -> R,
 {
     with_var(key, None::<&str>, closure)
 }
@@ -127,7 +127,7 @@ pub fn with_vars<K, V, F, R>(kvs: impl AsRef<[(K, Option<V>)]>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
     V: AsRef<OsStr> + Clone,
-    F: Fn() -> R,
+    F: FnOnce() -> R,
 {
     let old_env = RestoreEnv::capture(
         SERIAL_TEST.lock(),
@@ -162,7 +162,7 @@ where
 pub fn with_vars_unset<K, F, R>(keys: impl AsRef<[K]>, closure: F) -> R
 where
     K: AsRef<OsStr> + Clone + Eq + Hash,
-    F: Fn() -> R,
+    F: FnOnce() -> R,
 {
     let kvs = keys
         .as_ref()
@@ -533,6 +533,15 @@ mod tests {
 
         assert!(env::var("MY_VAR_1").is_err());
         assert!(env::var("MY_VAR_2").is_err());
+    }
+
+    #[test]
+    fn test_fn_once() {
+        let value = String::from("Hello, ");
+        let value = crate::with_var("WORLD", Some("world!"), || {
+            value + &env::var("WORLD").unwrap()
+        });
+        assert_eq!(value, "Hello, world!");
     }
 
     #[cfg(feature = "async_closure")]
