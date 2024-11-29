@@ -215,149 +215,131 @@ where
     retval
 }
 
-// Make sure that all tests use independent environment variables, so that they don't interfere if
-// run in parallel.
 #[cfg(test)]
 mod tests {
     use std::env::VarError;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::{env, panic};
+
+    /// Generates unique String for use in tests below.
+    /// (we need to prevent collision of environment variable keys to make the tests non-flaky).
+    struct UniqueEnvKeyValGen {
+        counter: AtomicUsize,
+    }
+
+    impl UniqueEnvKeyValGen {
+        fn next(&self) -> String {
+            let id = self.counter.fetch_add(1, Ordering::SeqCst);
+            let key = format!("TEMP_ENV_KEY_{}", id);
+            let actual_val = env::var(key.clone());
+            assert_eq!(
+                Err(VarError::NotPresent),
+                actual_val,
+                "Test setup broken. {} environment variable is already set to {:?}",
+                key,
+                actual_val
+            );
+            key.to_string()
+        }
+    }
+
+    static GENERATOR: UniqueEnvKeyValGen = UniqueEnvKeyValGen {
+        counter: AtomicUsize::new(0),
+    };
 
     /// Test whether setting a variable is correctly undone.
     #[test]
     fn test_with_var_set() {
-        let hello_not_set = env::var("HELLO");
-        assert!(hello_not_set.is_err(), "`HELLO` must not be set.");
-
-        crate::with_var("HELLO", Some("world!"), || {
-            let hello_is_set = env::var("HELLO").unwrap();
-            assert_eq!(hello_is_set, "world!", "`HELLO` must be set to \"world!\".");
+        let env_key = &GENERATOR.next();
+        crate::with_var(env_key, Some(env_key), || {
+            assert_eq!(env::var(env_key), Ok(env_key.to_string()));
         });
-
-        let hello_not_set_after = env::var("HELLO");
-        assert!(hello_not_set_after.is_err(), "`HELLO` must not be set.");
+        assert_eq!(env::var(env_key), Err(VarError::NotPresent));
     }
 
     /// Test whether unsetting a variable is correctly undone.
     #[test]
     fn test_with_var_set_to_none() {
-        env::set_var("FOO", "bar");
-        let foo_is_set = env::var("FOO").unwrap();
-        assert_eq!(foo_is_set, "bar", "`FOO` must be set to \"bar\".");
-
-        crate::with_var("FOO", None::<&str>, || {
-            let foo_not_set = env::var("FOO");
-            assert!(foo_not_set.is_err(), "`FOO` must not be set.");
+        let env_key = &GENERATOR.next();
+        env::set_var(env_key, env_key);
+        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
+        crate::with_var(env_key, None::<&str>, || {
+            assert_eq!(env::var(env_key), Err(VarError::NotPresent));
         });
-
-        let foo_is_set_after = env::var("FOO").unwrap();
-        assert_eq!(foo_is_set_after, "bar", "`FOO` must be set to \"bar\".");
+        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
     }
 
     /// Test whether unsetting a variable through the shorthand is correctly undone.
     #[test]
     fn test_with_var_unset() {
-        env::set_var("BAR", "foo");
-        let foo_is_set = env::var("BAR").unwrap();
-        assert_eq!(foo_is_set, "foo", "`BAR` must be set to \"foo\".");
-
-        crate::with_var_unset("BAR", || {
-            let foo_not_set = env::var("BAR");
-            assert!(foo_not_set.is_err(), "`BAR` must not be set.");
+        let env_key = &GENERATOR.next();
+        env::set_var(env_key, env_key);
+        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
+        crate::with_var_unset(env_key, || {
+            assert_eq!(env::var(env_key), Err(VarError::NotPresent));
         });
-
-        let foo_is_set_after = env::var("BAR").unwrap();
-        assert_eq!(foo_is_set_after, "foo", "`BAR` must be set to \"foo\".");
+        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
     }
 
     /// Test whether overriding an existing variable is correctly undone.
     #[test]
     fn test_with_var_override() {
-        env::set_var("BLAH", "blub");
-        let blah_is_set = env::var("BLAH").unwrap();
-        assert_eq!(blah_is_set, "blub", "`BLAH` must be set to \"blah\".");
-
-        crate::with_var("BLAH", Some("new"), || {
-            let blah_is_set_new = env::var("BLAH").unwrap();
-            assert_eq!(blah_is_set_new, "new", "`BLAH` must be set to \"newb\".");
+        let env_key = &GENERATOR.next();
+        env::set_var(env_key, env_key);
+        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
+        crate::with_var(env_key, Some("new"), || {
+            assert_eq!(env::var(env_key), Ok("new".to_string()));
         });
-
-        let blah_is_set_after = env::var("BLAH").unwrap();
-        assert_eq!(
-            blah_is_set_after, "blub",
-            "`BLAH` must be set to \"blubr\"."
-        );
+        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
     }
 
     /// Test whether overriding a variable is correctly undone in case of a panic.
     #[test]
     fn test_with_var_panic() {
-        env::set_var("PANIC", "panic");
-        let panic_is_set = env::var("PANIC").unwrap();
-        assert_eq!(panic_is_set, "panic", "`PANIC` must be set to \"panic\".");
-
+        let env_key = &GENERATOR.next();
+        env::set_var(env_key, env_key);
+        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
         let did_panic = panic::catch_unwind(|| {
-            crate::with_var("PANIC", Some("don't panic"), || {
-                let panic_is_set_new = env::var("PANIC").unwrap();
-                assert_eq!(
-                    panic_is_set_new, "don't panic",
-                    "`PANIC` must be set to \"don't panic\"."
-                );
+            crate::with_var(env_key, Some("don't panic"), || {
+                assert_eq!(env::var(env_key), Ok("don't panic".to_string()));
                 panic!("abort this closure with a panic.");
             });
         });
-
         assert!(did_panic.is_err(), "The closure must panic.");
-        let panic_is_set_after = env::var("PANIC").unwrap();
-        assert_eq!(
-            panic_is_set_after, "panic",
-            "`PANIC` must be set to \"panic\"."
-        );
+        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
     }
 
     /// Test whether setting multiple variable is correctly undone.
     #[test]
     fn test_with_vars_set() {
-        let one_not_set = env::var("ONE");
-        assert!(one_not_set.is_err(), "`ONE` must not be set.");
-        let two_not_set = env::var("TWO");
-        assert!(two_not_set.is_err(), "`TWO` must not be set.");
-
-        crate::with_vars([("ONE", Some("1")), ("TWO", Some("2"))], || {
-            let one_is_set = env::var("ONE").unwrap();
-            assert_eq!(one_is_set, "1", "`ONE` must be set to \"1\".");
-            let two_is_set = env::var("TWO").unwrap();
-            assert_eq!(two_is_set, "2", "`TWO` must be set to \"2\".");
+        let env_key_1 = &GENERATOR.next();
+        let env_key_2 = &GENERATOR.next();
+        crate::with_vars([(env_key_1, Some("1")), (env_key_2, Some("2"))], || {
+            assert_eq!(env::var(env_key_1), Ok("1".to_string()));
+            assert_eq!(env::var(env_key_2), Ok("2".to_string()));
         });
-
-        let one_not_set_after = env::var("ONE");
-        assert!(one_not_set_after.is_err(), "`ONE` must not be set.");
-        let two_not_set_after = env::var("TWO");
-        assert!(two_not_set_after.is_err(), "`TWO` must not be set.");
+        assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
+        assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
     }
 
-    /// Test whether setting multiple variable is returns result.
+    /// Test whether setting multiple variable returns result.
     #[test]
     fn test_with_vars_set_returning() {
-        let one_not_set = env::var("ONE");
-        assert!(one_not_set.is_err(), "`ONE` must not be set.");
-        let two_not_set = env::var("TWO");
-        assert!(two_not_set.is_err(), "`TWO` must not be set.");
-
-        let r = crate::with_vars([("ONE", Some("1")), ("TWO", Some("2"))], || {
-            let one_is_set = env::var("ONE").unwrap();
-            let two_is_set = env::var("TWO").unwrap();
+        let env_key_1 = &GENERATOR.next();
+        let env_key_2 = &GENERATOR.next();
+        let r = crate::with_vars([(env_key_1, Some("1")), (env_key_2, Some("2"))], || {
+            let one_is_set = env::var(env_key_1);
+            let two_is_set = env::var(env_key_2);
             (one_is_set, two_is_set)
         });
 
         let (one_from_closure, two_from_closure) = r;
 
-        assert_eq!(one_from_closure, "1", "`ONE` had to be set to \"1\".");
-        assert_eq!(two_from_closure, "2", "`TWO` had to be set to \"2\".");
+        assert_eq!(one_from_closure, Ok("1".to_string()));
+        assert_eq!(two_from_closure, Ok("2".to_string()));
 
-        let one_not_set_after = env::var("ONE");
-        assert!(one_not_set_after.is_err(), "`ONE` must not be set.");
-        let two_not_set_after = env::var("TWO");
-        assert!(two_not_set_after.is_err(), "`TWO` must not be set.");
+        assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
+        assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
     }
 
     /// Test whether unsetting multiple variables is correctly undone.
