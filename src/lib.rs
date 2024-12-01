@@ -369,11 +369,11 @@ mod tests {
         crate::with_vars(
             [(env_key_1, Some("set")), (env_key_2, None::<&str>)],
             || {
-                assert_eq!(env::var(env_key_1), Ok("set".to_string()),);
+                assert_eq!(env::var(env_key_1), Ok("set".to_string()));
                 assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
             },
         );
-        assert_eq!(env::var(env_key_1), Err(VarError::NotPresent),);
+        assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
         assert_eq!(env::var(env_key_2), Ok("unset".to_string()));
     }
 
@@ -388,13 +388,13 @@ mod tests {
         crate::with_vars(
             [(env_key_1, Some("other")), (env_key_2, Some("value"))],
             || {
-                assert_eq!(env::var(env_key_1), Ok("other".to_string()),);
-                assert_eq!(env::var(env_key_2), Ok("value".to_string()),);
+                assert_eq!(env::var(env_key_1), Ok("other".to_string()));
+                assert_eq!(env::var(env_key_2), Ok("value".to_string()));
             },
         );
 
-        assert_eq!(env::var(env_key_1), Ok(env_key_1.to_string()),);
-        assert_eq!(env::var(env_key_2), Ok(env_key_2.to_string()),);
+        assert_eq!(env::var(env_key_1), Ok(env_key_1.to_string()));
+        assert_eq!(env::var(env_key_2), Ok(env_key_2.to_string()));
     }
 
     /// Test, if setting the same variables twice, the latter one is used.
@@ -404,10 +404,10 @@ mod tests {
         crate::with_vars(
             [(env_key, Some("initial")), (env_key, Some("override"))],
             || {
-                assert_eq!(env::var(env_key), Ok("override".to_string()),);
+                assert_eq!(env::var(env_key), Ok("override".to_string()));
             },
         );
-        assert_eq!(env::var(env_key), Err(VarError::NotPresent),);
+        assert_eq!(env::var(env_key), Err(VarError::NotPresent));
     }
 
     /// Test that unsetting and setting the same variable leads to the variable being set.
@@ -419,11 +419,11 @@ mod tests {
         crate::with_vars(
             [(env_key, None::<&str>), (env_key, Some("new value"))],
             || {
-                assert_eq!(env::var(env_key), Ok("new value".to_string()),);
+                assert_eq!(env::var(env_key), Ok("new value".to_string()));
             },
         );
 
-        assert_eq!(env::var(env_key), Ok("my_var".to_string()),);
+        assert_eq!(env::var(env_key), Ok("my_var".to_string()));
     }
 
     /// Test that setting and unsetting the same variable leads to the variable being unset.
@@ -434,11 +434,11 @@ mod tests {
         crate::with_vars(
             [(env_key, Some("it is set")), (env_key, None::<&str>)],
             || {
-                assert_eq!(env::var(env_key), Err(VarError::NotPresent),);
+                assert_eq!(env::var(env_key), Err(VarError::NotPresent));
             },
         );
 
-        assert_eq!(env::var(env_key), Err(VarError::NotPresent),);
+        assert_eq!(env::var(env_key), Err(VarError::NotPresent));
     }
 
     #[test]
@@ -452,8 +452,8 @@ mod tests {
             })
         });
 
-        assert_eq!(env::var(env_key_1), Err(VarError::NotPresent),);
-        assert_eq!(env::var(env_key_2), Err(VarError::NotPresent),);
+        assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
+        assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
     }
 
     #[test]
@@ -513,7 +513,7 @@ mod tests {
         let (one_from_closure, two_from_closure) = r;
         assert_eq!(one_from_closure, "1");
         assert_eq!(two_from_closure, "2");
-        assert_eq!(env::var(env_key_1), Err(VarError::NotPresent),);
-        assert_eq!(env::var(env_key_2), Err(VarError::NotPresent),);
+        assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
+        assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
     }
 }
