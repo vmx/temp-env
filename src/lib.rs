@@ -322,9 +322,9 @@ mod tests {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
 
-        crate::with_vars([(env_key_1, Some("1")), (env_key_2, Some("2"))], || {
-            assert_eq!(env::var(env_key_1), Ok("1".to_string()));
-            assert_eq!(env::var(env_key_2), Ok("2".to_string()));
+        crate::with_vars([(env_key_1, Some(env_key_1)), (env_key_2, Some(env_key_2))], || {
+            assert_eq!(env::var(env_key_1), Ok(env_key_1.to_string()));
+            assert_eq!(env::var(env_key_2), Ok(env_key_2.to_string()));
         });
 
         assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
@@ -336,7 +336,7 @@ mod tests {
     fn test_with_vars_set_returning() {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
-        let r = crate::with_vars([(env_key_1, Some("1")), (env_key_2, Some("2"))], || {
+        let r = crate::with_vars([(env_key_1, Some(env_key_1)), (env_key_2, Some(env_key_2))], || {
             let one_is_set = env::var(env_key_1);
             let two_is_set = env::var(env_key_2);
             (one_is_set, two_is_set)
@@ -344,8 +344,8 @@ mod tests {
 
         let (one_from_closure, two_from_closure) = r;
 
-        assert_eq!(one_from_closure, Ok("1".to_string()));
-        assert_eq!(two_from_closure, Ok("2".to_string()));
+        assert_eq!(one_from_closure, Ok(env_key_1.to_string()));
+        assert_eq!(two_from_closure, Ok(env_key_2.to_string()));
 
         assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
         assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
@@ -354,15 +354,15 @@ mod tests {
     /// Test unsetting multiple environment variables via shorthand.
     #[test]
     fn test_with_vars_unset() {
-        let env_key_set = &GENERATOR.next();
-        let env_key_unset = &GENERATOR.next();
-        env::set_var(env_key_set, "val");
-        crate::with_vars_unset([env_key_set, env_key_unset], || {
-            assert_eq!(env::var(env_key_set), Err(VarError::NotPresent));
-            assert_eq!(env::var(env_key_unset), Err(VarError::NotPresent));
+        let env_key_1 = &GENERATOR.next();
+        let env_key_2 = &GENERATOR.next();
+        env::set_var(env_key_1, env_key_1);
+        crate::with_vars_unset([env_key_1, env_key_2], || {
+            assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
+            assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
         });
-        assert_eq!(env::var(env_key_set), Ok("val".to_string()));
-        assert_eq!(env::var(env_key_unset), Err(VarError::NotPresent));
+        assert_eq!(env::var(env_key_1), Ok(env_key_1.to_string()));
+        assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
     }
 
     /// Test partially setting and unsetting environment variables.
@@ -370,7 +370,7 @@ mod tests {
     fn test_with_vars_partially_unset() {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
-        env::set_var(env_key_2, "unset");
+        env::set_var(env_key_2, env_key_2);
 
         crate::with_vars(
             [(env_key_1, Some("set")), (env_key_2, None::<&str>)],
@@ -381,7 +381,7 @@ mod tests {
         );
 
         assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
-        assert_eq!(env::var(env_key_2), Ok("unset".to_string()));
+        assert_eq!(env::var(env_key_2), Ok(env_key_2.to_string()));
     }
 
     /// Test overriding multiple environment variables.
@@ -421,7 +421,7 @@ mod tests {
     #[test]
     fn test_with_vars_unset_set() {
         let env_key = &GENERATOR.next();
-        env::set_var(env_key, "my_var");
+        env::set_var(env_key, env_key);
 
         crate::with_vars(
             [(env_key, None::<&str>), (env_key, Some("new value"))],
@@ -430,7 +430,7 @@ mod tests {
             },
         );
 
-        assert_eq!(env::var(env_key), Ok("my_var".to_string()));
+        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
     }
 
     /// Test that setting and unsetting the same variable leads to the variable being unset.
@@ -452,10 +452,10 @@ mod tests {
     fn test_with_nested_set() {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
-        crate::with_var(env_key_1, Some("1"), || {
-            crate::with_var(env_key_2, Some("2"), || {
-                assert_eq!(env::var(env_key_1), Ok("1".to_string()));
-                assert_eq!(env::var(env_key_2), Ok("2".to_string()));
+        crate::with_var(env_key_1, Some(env_key_1), || {
+            crate::with_var(env_key_2, Some(env_key_2), || {
+                assert_eq!(env::var(env_key_1), Ok(env_key_1.to_string()));
+                assert_eq!(env::var(env_key_2), Ok(env_key_2.to_string()));
             })
         });
 
@@ -510,7 +510,7 @@ mod tests {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
 
-        let r = crate::async_with_vars([(env_key_1, Some("1")), (env_key_2, Some("2"))], async {
+        let r = crate::async_with_vars([(env_key_1, Some(env_key_1)), (env_key_2, Some(env_key_2))], async {
             let one_is_set = env::var(env_key_1).unwrap();
             let two_is_set = env::var(env_key_2).unwrap();
             (one_is_set, two_is_set)
@@ -518,8 +518,8 @@ mod tests {
         .await;
 
         let (one_from_closure, two_from_closure) = r;
-        assert_eq!(one_from_closure, "1");
-        assert_eq!(two_from_closure, "2");
+        assert_eq!(one_from_closure, env_key_1.to_string());
+        assert_eq!(two_from_closure, env_key_2.to_string());
         assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
         assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
     }
