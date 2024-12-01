@@ -107,7 +107,7 @@ impl<'a> RestoreEnv<'a> {
     }
 }
 
-impl<'a> Drop for RestoreEnv<'a> {
+impl Drop for RestoreEnv<'_> {
     fn drop(&mut self) {
         for (var, value) in self.env.iter() {
             update_env(var, value.as_ref().map(|v| v.as_os_str()));
@@ -191,7 +191,7 @@ where
 ///     let v = std::env::var("MY_VAR").unwrap();
 ///     assert_eq!(v, "ok".to_owned());
 /// }
-
+///
 /// #[tokio::test]
 /// async fn test_async_closure() {
 ///     crate::async_with_vars([("MY_VAR", Some("ok"))], check_var());
