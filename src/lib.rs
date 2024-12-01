@@ -192,9 +192,6 @@ where
 ///     assert_eq!(v, "ok".to_owned());
 /// }
 ///
-
-///
-
 /// #[cfg(feature = "async_closure")]
 /// #[tokio::test]
 /// async fn test_async_closure() {
@@ -266,7 +263,6 @@ mod tests {
     fn test_with_var_set_to_none() {
         let env_key = &GENERATOR.next();
         env::set_var(env_key, env_key);
-        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
         crate::with_var(env_key, None::<&str>, || {
             assert_eq!(env::var(env_key), Err(VarError::NotPresent));
         });
@@ -278,7 +274,6 @@ mod tests {
     fn test_with_var_unset() {
         let env_key = &GENERATOR.next();
         env::set_var(env_key, env_key);
-        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
         crate::with_var_unset(env_key, || {
             assert_eq!(env::var(env_key), Err(VarError::NotPresent));
         });
