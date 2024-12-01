@@ -322,10 +322,13 @@ mod tests {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
 
-        crate::with_vars([(env_key_1, Some(env_key_1)), (env_key_2, Some(env_key_2))], || {
-            assert_eq!(env::var(env_key_1), Ok(env_key_1.to_string()));
-            assert_eq!(env::var(env_key_2), Ok(env_key_2.to_string()));
-        });
+        crate::with_vars(
+            [(env_key_1, Some(env_key_1)), (env_key_2, Some(env_key_2))],
+            || {
+                assert_eq!(env::var(env_key_1), Ok(env_key_1.to_string()));
+                assert_eq!(env::var(env_key_2), Ok(env_key_2.to_string()));
+            },
+        );
 
         assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
         assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
@@ -337,11 +340,14 @@ mod tests {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
 
-        let r = crate::with_vars([(env_key_1, Some(env_key_1)), (env_key_2, Some(env_key_2))], || {
-            let one_is_set = env::var(env_key_1);
-            let two_is_set = env::var(env_key_2);
-            (one_is_set, two_is_set)
-        });
+        let r = crate::with_vars(
+            [(env_key_1, Some(env_key_1)), (env_key_2, Some(env_key_2))],
+            || {
+                let one_is_set = env::var(env_key_1);
+                let two_is_set = env::var(env_key_2);
+                (one_is_set, two_is_set)
+            },
+        );
 
         let (one_from_closure, two_from_closure) = r;
 
@@ -518,11 +524,14 @@ mod tests {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
 
-        let r = crate::async_with_vars([(env_key_1, Some(env_key_1)), (env_key_2, Some(env_key_2))], async {
-            let one_is_set = env::var(env_key_1).unwrap();
-            let two_is_set = env::var(env_key_2).unwrap();
-            (one_is_set, two_is_set)
-        })
+        let r = crate::async_with_vars(
+            [(env_key_1, Some(env_key_1)), (env_key_2, Some(env_key_2))],
+            async {
+                let one_is_set = env::var(env_key_1).unwrap();
+                let two_is_set = env::var(env_key_2).unwrap();
+                (one_is_set, two_is_set)
+            },
+        )
         .await;
 
         let (one_from_closure, two_from_closure) = r;
