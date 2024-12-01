@@ -3,7 +3,7 @@ name: build
 on: [push, pull_request]
 
 env:
-  MSRV: 1.62.1
+  MSRV: 1.63.0
 
 jobs:
   msrv:
