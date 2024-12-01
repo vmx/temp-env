@@ -336,6 +336,7 @@ mod tests {
     fn test_with_vars_set_returning() {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
+
         let r = crate::with_vars([(env_key_1, Some(env_key_1)), (env_key_2, Some(env_key_2))], || {
             let one_is_set = env::var(env_key_1);
             let two_is_set = env::var(env_key_2);
@@ -357,10 +358,12 @@ mod tests {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
         env::set_var(env_key_1, env_key_1);
+
         crate::with_vars_unset([env_key_1, env_key_2], || {
             assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
             assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
         });
+
         assert_eq!(env::var(env_key_1), Ok(env_key_1.to_string()));
         assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
     }
@@ -408,12 +411,14 @@ mod tests {
     #[test]
     fn test_with_vars_same_vars() {
         let env_key = &GENERATOR.next();
+
         crate::with_vars(
             [(env_key, Some("initial")), (env_key, Some("override"))],
             || {
                 assert_eq!(env::var(env_key), Ok("override".to_string()));
             },
         );
+
         assert_eq!(env::var(env_key), Err(VarError::NotPresent));
     }
 
@@ -452,6 +457,7 @@ mod tests {
     fn test_with_nested_set() {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
+
         crate::with_var(env_key_1, Some(env_key_1), || {
             crate::with_var(env_key_2, Some(env_key_2), || {
                 assert_eq!(env::var(env_key_1), Ok(env_key_1.to_string()));
@@ -484,10 +490,12 @@ mod tests {
     async fn test_async_closure() {
         let env_key = &GENERATOR.next();
         crate::async_with_vars([(env_key, Some("ok"))], check_var(env_key)).await;
+
         let f = async {
             let v = env::var(env_key).unwrap();
             assert_eq!(v, "ok".to_owned());
         };
+
         crate::async_with_vars([(env_key, Some("ok"))], f).await;
     }
 
