@@ -248,80 +248,90 @@ mod tests {
         counter: AtomicUsize::new(0),
     };
 
-    /// Test whether setting a variable is correctly undone.
+    /// Test setting an environment variable.
     #[test]
     fn test_with_var_set() {
         let env_key = &GENERATOR.next();
+
         crate::with_var(env_key, Some(env_key), || {
             assert_eq!(env::var(env_key), Ok(env_key.to_string()));
         });
+
         assert_eq!(env::var(env_key), Err(VarError::NotPresent));
     }
 
-    /// Test whether unsetting a variable is correctly undone.
+    /// Test unsetting an environment variable.
     #[test]
     fn test_with_var_set_to_none() {
         let env_key = &GENERATOR.next();
         env::set_var(env_key, env_key);
+
         crate::with_var(env_key, None::<&str>, || {
             assert_eq!(env::var(env_key), Err(VarError::NotPresent));
         });
+
         assert_eq!(env::var(env_key), Ok(env_key.to_string()));
     }
 
-    /// Test whether unsetting a variable through the shorthand is correctly undone.
+    /// Test setting an environment variable via shorthand.
     #[test]
     fn test_with_var_unset() {
         let env_key = &GENERATOR.next();
         env::set_var(env_key, env_key);
+
         crate::with_var_unset(env_key, || {
             assert_eq!(env::var(env_key), Err(VarError::NotPresent));
         });
+
         assert_eq!(env::var(env_key), Ok(env_key.to_string()));
     }
 
-    /// Test whether overriding an existing variable is correctly undone.
+    /// Test overriding an environment variable.
     #[test]
     fn test_with_var_override() {
         let env_key = &GENERATOR.next();
         env::set_var(env_key, env_key);
-        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
+
         crate::with_var(env_key, Some("new"), || {
             assert_eq!(env::var(env_key), Ok("new".to_string()));
         });
+
         assert_eq!(env::var(env_key), Ok(env_key.to_string()));
     }
 
-    /// Test whether overriding a variable is correctly undone in case of a panic.
+    /// Test with_var panic behavior.
     #[test]
     fn test_with_var_panic() {
         let env_key = &GENERATOR.next();
         env::set_var(env_key, env_key);
-        assert_eq!(env::var(env_key), Ok(env_key.to_string()));
+
         let did_panic = panic::catch_unwind(|| {
             crate::with_var(env_key, Some("don't panic"), || {
                 assert_eq!(env::var(env_key), Ok("don't panic".to_string()));
                 panic!("abort this closure with a panic.");
             });
         });
+
         assert!(did_panic.is_err(), "The closure must panic.");
         assert_eq!(env::var(env_key), Ok(env_key.to_string()));
     }
 
-    /// Test whether setting multiple variable is correctly undone.
+    /// Test setting multiple environment variables.
     #[test]
     fn test_with_vars_set() {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
+
         crate::with_vars([(env_key_1, Some("1")), (env_key_2, Some("2"))], || {
             assert_eq!(env::var(env_key_1), Ok("1".to_string()));
             assert_eq!(env::var(env_key_2), Ok("2".to_string()));
         });
+
         assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
         assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
     }
 
-    /// Test whether setting multiple variable returns result.
+    /// Test with_vars closure return behavior.
     #[test]
     fn test_with_vars_set_returning() {
         let env_key_1 = &GENERATOR.next();
@@ -341,7 +351,7 @@ mod tests {
         assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
     }
 
-    /// Test whether unsetting multiple variables is correctly undone.
+    /// Test unsetting multiple environment variables via shorthand.
     #[test]
     fn test_with_vars_unset() {
         let env_key_set = &GENERATOR.next();
@@ -355,12 +365,13 @@ mod tests {
         assert_eq!(env::var(env_key_unset), Err(VarError::NotPresent));
     }
 
-    /// Test whether unsetting one of the variable is correctly undone.
+    /// Test partially setting and unsetting environment variables.
     #[test]
     fn test_with_vars_partially_unset() {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
         env::set_var(env_key_2, "unset");
+
         crate::with_vars(
             [(env_key_1, Some("set")), (env_key_2, None::<&str>)],
             || {
@@ -368,11 +379,12 @@ mod tests {
                 assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
             },
         );
+
         assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
         assert_eq!(env::var(env_key_2), Ok("unset".to_string()));
     }
 
-    /// Test whether overriding existing variables is correctly undone.
+    /// Test overriding multiple environment variables.
     #[test]
     fn test_with_vars_override() {
         let env_key_1 = &GENERATOR.next();
@@ -392,7 +404,7 @@ mod tests {
         assert_eq!(env::var(env_key_2), Ok(env_key_2.to_string()));
     }
 
-    /// Test, if setting the same variables twice, the latter one is used.
+    /// Test, when setting the same variable twice, the latter one is used.
     #[test]
     fn test_with_vars_same_vars() {
         let env_key = &GENERATOR.next();
