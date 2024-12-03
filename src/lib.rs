@@ -107,7 +107,7 @@ impl<'a> RestoreEnv<'a> {
     }
 }
 
-impl<'a> Drop for RestoreEnv<'a> {
+impl Drop for RestoreEnv<'_> {
     fn drop(&mut self) {
         for (var, value) in self.env.iter() {
             update_env(var, value.as_ref().map(|v| v.as_os_str()));
@@ -191,7 +191,8 @@ where
 ///     let v = std::env::var("MY_VAR").unwrap();
 ///     assert_eq!(v, "ok".to_owned());
 /// }
-
+///
+/// #[cfg(feature = "async_closure")]
 /// #[tokio::test]
 /// async fn test_async_closure() {
 ///     crate::async_with_vars([("MY_VAR", Some("ok"))], check_var());
@@ -546,7 +547,7 @@ mod tests {
 
     #[cfg(feature = "async_closure")]
     async fn check_var() {
-        let v = std::env::var("MY_VAR").unwrap();
+        let v = env::var("MY_VAR").unwrap();
         assert_eq!(v, "ok".to_owned());
     }
 
@@ -555,7 +556,7 @@ mod tests {
     async fn test_async_closure() {
         crate::async_with_vars([("MY_VAR", Some("ok"))], check_var()).await;
         let f = async {
-            let v = std::env::var("MY_VAR").unwrap();
+            let v = env::var("MY_VAR").unwrap();
             assert_eq!(v, "ok".to_owned());
         };
         crate::async_with_vars([("MY_VAR", Some("ok"))], f).await;
@@ -566,7 +567,7 @@ mod tests {
     async fn test_async_closure_calls_closure() {
         let (tx, rx) = tokio::sync::oneshot::channel();
         let f = async {
-            tx.send(std::env::var("MY_VAR")).unwrap();
+            tx.send(env::var("MY_VAR")).unwrap();
         };
         crate::async_with_vars([("MY_VAR", Some("ok"))], f).await;
         let value = rx.await.unwrap().unwrap();
