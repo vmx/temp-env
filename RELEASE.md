@@ -9,7 +9,7 @@ This requires the following permissions
 
 - on github.com/vmx/temp-env
   - creating tags
-  - pushing to `master`
+  - pushing to `main`
 - on crates.io
   - publish access to all published crates
 
