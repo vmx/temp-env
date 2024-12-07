@@ -141,6 +141,25 @@ where
     retval
 }
 
+/// Unsets all environment variables for the duration of the closure.
+///
+/// The previous values are restored when the closure completes or panics, before unwinding the
+/// panic.
+pub fn with_all_unset<F, R>(closure: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    let guard = SERIAL_TEST.lock();
+    let keys: Vec<_> = env::vars_os().map(|(k, _)| k).collect();
+    let old_env = RestoreEnv::capture(guard, keys.iter().map(|k| k.as_os_str()));
+    for key in keys.iter() {
+        update_env(key, None::<String>);
+    }
+    let retval = closure();
+    drop(old_env);
+    retval
+}
+
 /// Unsets environment variables for the duration of the closure.
 ///
 /// The previous values are restored when the closure completes or panics, before unwinding the
@@ -366,6 +385,43 @@ mod tests {
         env::set_var(env_key_1, env_key_1);
 
         crate::with_vars_unset([env_key_1, env_key_2], || {
+            assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
+            assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
+        });
+
+        assert_eq!(env::var(env_key_1), Ok(env_key_1.to_string()));
+        assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
+    }
+
+    /// Test unsetting all environment variables via shorthand.
+    #[test]
+    fn test_with_all_unset() {
+        let env_key_1 = &GENERATOR.next();
+        let env_key_2 = &GENERATOR.next();
+        env::set_var(env_key_1, env_key_1);
+
+        crate::with_all_unset(|| {
+            assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
+            assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
+        });
+
+        assert_eq!(env::var(env_key_1), Ok(env_key_1.to_string()));
+        assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
+    }
+
+    #[test]
+    fn test_with_all_unset_nested() {
+        let env_key_1 = &GENERATOR.next();
+        let env_key_2 = &GENERATOR.next();
+        env::set_var(env_key_1, env_key_1);
+
+        crate::with_all_unset(|| {
+            assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
+            assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
+            crate::with_var(env_key_2, Some(env_key_2), || {
+                assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
+                assert_eq!(env::var(env_key_2), Ok(env_key_2.to_string()));
+            });
             assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
             assert_eq!(env::var(env_key_2), Err(VarError::NotPresent));
         });
