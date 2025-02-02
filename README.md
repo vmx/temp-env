@@ -3,7 +3,7 @@ temp-env
 
 Set environment variables temporarily.
 
-This crate is useful for testing with different environment variables that should not interfere.
+This crate is useful for testing with different environment variables that should not interfere when running `cargo test`.
 
 This code started as a small test helper written by [@fabian-braun] and [@nbaztec] and published by [@fabian-braun]
 on [StackOverflow]. [@vmx] found it useful and took the time to make it a proper crate.
@@ -71,6 +71,14 @@ Features
 --------
 
  - `async_closure`: When enabled you can use `async_with_var()` with async closures. This feature needs at least Rust version 1.64.
+
+Noteworthy
+----------
+
+As an alternative to using this crate,
+you might consider migrating your testing to [`cargo-nextest`](https://github.com/nextest-rs/nextest).
+`cargo-nextest` runs each test in a separate process, which makes it unnecessary to synchronize the altering of environment variables
+as described [here](https://nexte.st/docs/configuration/env-vars/#altering-the-environment-within-tests).
 
 License
 -------
