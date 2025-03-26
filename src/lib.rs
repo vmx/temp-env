@@ -178,8 +178,8 @@ where
     V: AsRef<OsStr>,
 {
     match value {
-        Some(v) => env::set_var(key, v),
-        None => env::remove_var(key),
+        Some(v) => unsafe { env::set_var(key, v) },
+        None => unsafe { env::remove_var(key) },
     }
 }
 
@@ -264,7 +264,7 @@ mod tests {
     #[test]
     fn test_with_var_set_to_none() {
         let env_key = &GENERATOR.next();
-        env::set_var(env_key, env_key);
+        unsafe { env::set_var(env_key, env_key) };
 
         crate::with_var(env_key, None::<&str>, || {
             assert_eq!(env::var(env_key), Err(VarError::NotPresent));
@@ -277,7 +277,7 @@ mod tests {
     #[test]
     fn test_with_var_unset() {
         let env_key = &GENERATOR.next();
-        env::set_var(env_key, env_key);
+        unsafe { env::set_var(env_key, env_key) };
 
         crate::with_var_unset(env_key, || {
             assert_eq!(env::var(env_key), Err(VarError::NotPresent));
@@ -290,7 +290,7 @@ mod tests {
     #[test]
     fn test_with_var_override() {
         let env_key = &GENERATOR.next();
-        env::set_var(env_key, env_key);
+        unsafe { env::set_var(env_key, env_key) };
 
         crate::with_var(env_key, Some("new"), || {
             assert_eq!(env::var(env_key), Ok("new".to_string()));
@@ -303,7 +303,7 @@ mod tests {
     #[test]
     fn test_with_var_panic() {
         let env_key = &GENERATOR.next();
-        env::set_var(env_key, env_key);
+        unsafe { env::set_var(env_key, env_key) };
 
         let did_panic = panic::catch_unwind(|| {
             crate::with_var(env_key, Some("don't panic"), || {
@@ -363,7 +363,7 @@ mod tests {
     fn test_with_vars_unset() {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
-        env::set_var(env_key_1, env_key_1);
+        unsafe { env::set_var(env_key_1, env_key_1) };
 
         crate::with_vars_unset([env_key_1, env_key_2], || {
             assert_eq!(env::var(env_key_1), Err(VarError::NotPresent));
@@ -379,7 +379,7 @@ mod tests {
     fn test_with_vars_partially_unset() {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
-        env::set_var(env_key_2, env_key_2);
+        unsafe { env::set_var(env_key_2, env_key_2) };
 
         crate::with_vars(
             [(env_key_1, Some("set")), (env_key_2, None::<&str>)],
@@ -398,8 +398,8 @@ mod tests {
     fn test_with_vars_override() {
         let env_key_1 = &GENERATOR.next();
         let env_key_2 = &GENERATOR.next();
-        env::set_var(env_key_1, env_key_1);
-        env::set_var(env_key_2, env_key_2);
+        unsafe { env::set_var(env_key_1, env_key_1) };
+        unsafe { env::set_var(env_key_2, env_key_2) };
 
         crate::with_vars(
             [(env_key_1, Some("other")), (env_key_2, Some("value"))],
@@ -432,7 +432,7 @@ mod tests {
     #[test]
     fn test_with_vars_unset_set() {
         let env_key = &GENERATOR.next();
-        env::set_var(env_key, env_key);
+        unsafe { env::set_var(env_key, env_key) };
 
         crate::with_vars(
             [(env_key, None::<&str>), (env_key, Some("new value"))],
