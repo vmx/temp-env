@@ -13,37 +13,33 @@ Examples
 
 ```rust
 temp_env::with_var("MY_ENV_VAR", Some("production"), || {
-    // Run some code where `MY_ENV_VAR` set to `"production"`.
+    // Run some code where `MY_ENV_VAR` is set to `production`.
 });
 
 
 temp_env::with_vars(
     [
-        ("FIRST_VAR", Some("Hello")),
-        ("SECOND_VAR", Some("World!")),
+        ("FIRST", Some("Hello")),
+        ("SECOND", Some("World!")),
     ],
     || {
-        // Run some code where `FIRST_VAR` is set to `"Hello"` and `SECOND_VAR` is set to
-        // `"World!"`.
+        // Run some code where `FIRST` is set to `Hello` and `SECOND` is set to `World!`.
     }
 );
 
 temp_env::with_vars(
     [
-        ("FIRST_VAR", Some("Hello")),
-        ("SECOND_VAR", None),
+        ("FIRST", Some("Hello")),
+        ("SECOND", None),
     ],
     || {
-        // Run some code where `FIRST_VAR` is set to `"Hello"` and `SECOND_VAR` is unset (even if
+        // Run some code where `FIRST` is set to `Hello` and `SECOND` is unset (even if
         // it was set before)
     }
 );
-```
 
-Starting from version 0.3.0 you can return a value from inside the closure:
-
-```rust
-let r = temp_env::with_var("MY_ENV_VAR", Some("production"), || {
+let value = temp_env::with_var("MY_ENV_VAR", Some("production"), || {
+    // Compute a value in a closure while `MY_ENV_VAR` is set to `production`.
     let envvar = env::var("MY_ENV_VAR").unwrap();
     if envvar == "production" {
         true
