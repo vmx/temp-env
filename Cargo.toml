@@ -20,3 +20,6 @@ tokio = { version = "1.38.1", features = ["full"]}
 [features]
 default = []
 async_closure = ["dep:futures"]
+
+[package.metadata.docs]
+all-features = true
